@@ -4,3 +4,4 @@ dataset
 *.jpg
 *.png
 *.csv
+*.flake8
