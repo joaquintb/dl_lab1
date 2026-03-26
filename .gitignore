@@ -1,1 +1,6 @@
 dataset
+
+*.jpeg
+*.jpg
+*.png
+*.csv
