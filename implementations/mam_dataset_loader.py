@@ -86,7 +86,7 @@ if __name__ == '__main__':
     from torchvision import transforms
     csv = os.path.join('images', 'MAMe_dataset.csv')
     imgs = os.path.join('images', 'data')
-    ds = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()]))
+    ds = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]))
     print('Dataset size:', len(ds))
 
     # Test loading a sample

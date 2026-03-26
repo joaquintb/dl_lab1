@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(__file__))
 
 def main(args):
     transform = transforms.Compose([
-        transforms.Resize((256, 256)),
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
     ])
 
