@@ -1,0 +1,29 @@
+[
+  {
+    "name": "baseline",
+    "model": "vgg16",
+    "lr": 0.01,
+    "weight_decay": 1e-4,
+    "dropout": 0.5,
+    "epochs": 5,
+    "batch_size": 16
+  },
+  {
+    "name": "overfit_test",
+    "model": "vgg16",
+    "lr": 0.01,
+    "weight_decay": 0.0,
+    "dropout": 0.0,
+    "epochs": 20,
+    "batch_size": 32
+  },
+  {
+    "name": "underfit_test",
+    "model": "vgg11",
+    "lr": 1e-4,
+    "weight_decay": 1e-3,
+    "dropout": 0.7,
+    "epochs": 5,
+    "batch_size": 16
+  }
+]
