@@ -14,6 +14,10 @@ from mam_dataset_loader import MAMeDataset
 
 sys.path.append(os.path.dirname(__file__))
 
+# Compute paths relative to this script's location
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPT_DIR)  # parent of implementations/
+
 
 def main(args):
     transform = transforms.Compose([
@@ -77,8 +81,8 @@ def main(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--csv', default='images/MAMe_dataset.csv')
-    p.add_argument('--images-dir', default='images/data')
+    p.add_argument('--csv', default=os.path.join(_REPO_ROOT, 'images/MAMe_dataset.csv'))
+    p.add_argument('--images-dir', default=os.path.join(_REPO_ROOT, 'images/data'))
     p.add_argument('--batch-size', type=int, default=16)
     p.add_argument('--num-classes', type=int, default=None,
                    help='Number of output classes. If omitted, inferred from CSV labels.')

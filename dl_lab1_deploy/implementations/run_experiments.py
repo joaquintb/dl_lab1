@@ -5,6 +5,10 @@ from types import SimpleNamespace
 
 from main import main as run_main
 
+# Compute paths relative to this script's location
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPT_DIR)
+
 
 def run_all(config_path, csv, images_dir, results_dir='experiments_results'):
     os.makedirs(results_dir, exist_ok=True)
@@ -44,9 +48,9 @@ def run_all(config_path, csv, images_dir, results_dir='experiments_results'):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--config', default='implementations/experiments.json')
-    p.add_argument('--csv', default='images/MAMe_dataset.csv')
-    p.add_argument('--images-dir', default='images/data')
-    p.add_argument('--results-dir', default='experiments_results')
+    p.add_argument('--config', default=os.path.join(_REPO_ROOT, 'implementations/experiments.json'))
+    p.add_argument('--csv', default=os.path.join(_REPO_ROOT, 'images/MAMe_dataset.csv'))
+    p.add_argument('--images-dir', default=os.path.join(_REPO_ROOT, 'images/data'))
+    p.add_argument('--results-dir', default=os.path.join(_REPO_ROOT, 'experiments_results'))
     args = p.parse_args()
     run_all(args.config, args.csv, args.images_dir, args.results_dir)
