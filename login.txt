@@ -1,2 +1,48 @@
 ssh nct01191@alogin1.bsc.es
 H9nqPR.191
+
+================================================================================
+                        HOW TO RUN ON THE SUPERCOMPUTER
+================================================================================
+
+TERMINAL 1 (on the supercomputer)          |  TERMINAL 2 (on your local machine)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1) Login to the supercomputer:             |
+                                           |
+   ssh nct01191@alogin1.bsc.es             |
+                                           |
+2) Create a folder for the code (ONCE):    |
+                                           |
+   mkdir dl_lab1_deploy                    |
+                                           |
+3) Change to that folder:                  |
+                                           |
+   cd dl_lab1_deploy                       |
+                                           |
+4) Wait for files from Terminal 2 ...      |  5) Open a new terminal on your laptop
+                                           |
+                                           |  6) Navigate to the deploy folder and copy
+                                           |     all files (including images):
+                                           |
+                                           |     cd dl_lab1_deploy
+                                           |     rsync -aczP * \
+                                           |       nct01191@alogin1.bsc.es:~/dl_lab1_deploy
+                                           |
+7) Check all files are there:              |
+                                           |
+   ls -al                                  |
+                                           |
+8) Submit the job:                         |
+                                           |
+   sbatch -A nct_367 -q acc_training run_job.sh                      |
+                                           |
+9) Check job status:                       |
+                                           |
+   squeue -u nct01191                      |
+                                           |
+10) Results are in experiments_results/    |  11) Download results to your laptop, it will copy the whole experiments_results folder:
+                                           |
+    ls experiments_results/                |     scp -r nct01191@alogin1.bsc.es:~/dl_lab1_deploy/experiments_results .
+
+================================================================================
