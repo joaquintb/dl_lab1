@@ -2,6 +2,6 @@ dataset
 
 *.jpeg
 *.jpg
-*.png
+images/data/*.png
 *.csv
 *.flake8
