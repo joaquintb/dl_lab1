@@ -17,7 +17,7 @@ The `experiments.json` file defines three test configurations to demonstrate the
 - **Learning rate**: 0.01
 - **Weight decay**: 1e-4 (light regularization)
 - **Dropout**: 0.5
-- **Epochs**: 5
+- **Epochs**: 15
 
 Expected behavior: **balanced performance** — reasonable fit without overfitting.
 
@@ -33,12 +33,12 @@ Expected behavior: **high variance, low bias** — model memorizes training data
 
 ### 3) Underfit Test
 - **Model**: VGG11 (smaller capacity)
-- **Learning rate**: 1e-4 (very slow)
-- **Weight decay**: 1e-3 (heavy regularization)
-- **Dropout**: 0.7 (aggressive dropout)
-- **Epochs**: 5
+- **Learning rate**: 1e-6 (extremely slow — 10,000x slower than baseline)
+- **Weight decay**: 1e-2 (heavy regularization)
+- **Dropout**: 0.9 (very aggressive)
+- **Epochs**: 15
 
-Expected behavior: **high bias, low variance** — model fails to learn enough, poor on both training and test data.
+Expected behavior: **high bias, low variance** — model severely constrained, barely learns anything even with many epochs.
 
 ## Running Experiments
 
