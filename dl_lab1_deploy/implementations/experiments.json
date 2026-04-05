@@ -2,10 +2,10 @@
   {
     "name": "baseline",
     "model": "vgg16",
-    "lr": 0.01,
+    "lr": 0.001,
     "weight_decay": 1e-4,
     "dropout": 0.5,
-    "epochs": 5,
+    "epochs": 10,
     "batch_size": 16
   },
   {
@@ -20,9 +20,9 @@
   {
     "name": "underfit_test",
     "model": "vgg11",
-    "lr": 1e-4,
+    "lr": 1e-5,
     "weight_decay": 1e-3,
-    "dropout": 0.7,
+    "dropout": 0.8,
     "epochs": 5,
     "batch_size": 16
   }
