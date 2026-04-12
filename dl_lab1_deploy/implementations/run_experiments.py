@@ -26,7 +26,7 @@ def run_all(config_path, csv, images_dir, results_dir='experiments_results'):
         ns.model = exp.get('model', 'vgg16')
         ns.lr = exp.get('lr', 0.01)
         ns.weight_decay = exp.get('weight_decay', 1e-4)
-        ns.dropout = exp.get('dropout', 0.5)
+        ns.dropout = exp.get('dropout', None)
         ns.epochs = exp.get('epochs', 1)
 
         # redirect prints to a per-experiment log file

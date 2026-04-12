@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 
+from dl_lab1_deploy.implementations.model_factory import build_model
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -44,17 +45,7 @@ def main(args):
     else:
         num_classes = args.num_classes
 
-    # build model (support vgg11/vgg16)
-    if getattr(args, 'model', None) == 'vgg11':
-        model = vgg11(num_classes=num_classes).to(device)
-    else:
-        model = vgg16(num_classes=num_classes).to(device)
-
-    # adjust dropout in classifier if requested
-    if getattr(args, 'dropout', None) is not None:
-        for m in model.classifier.modules():
-            if isinstance(m, nn.Dropout):
-                m.p = float(args.dropout)
+    model = build_model(args, num_classes).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=getattr(args, 'lr', 0.01), momentum=0.9,
