@@ -1,6 +1,10 @@
 import torch
 from sklearn.metrics import f1_score, precision_score, recall_score
 
+import json
+import os
+import csv
+
 
 def _move_labels_to_device(labels, device):
     if isinstance(labels, torch.Tensor):
@@ -104,3 +108,18 @@ def test_model(model, dataloader, device, criterion):
     macro_recall = recall_score(all_labels, all_preds, average='macro', zero_division=0)
 
     return avg_loss, avg_acc, macro_f1, weighted_f1, macro_precision, macro_recall
+
+def save_history_csv(history_rows, output_dir):
+    history_path = os.path.join(output_dir, "history.csv")
+    fieldnames = ["epoch", "train_loss", "train_acc", "val_loss", "val_acc"]
+
+    with open(history_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(history_rows)
+
+
+def save_test_metrics_json(test_metrics, output_dir):
+    metrics_path = os.path.join(output_dir, "test_metrics.json")
+    with open(metrics_path, "w") as f:
+        json.dump(test_metrics, f, indent=2)

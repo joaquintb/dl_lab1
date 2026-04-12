@@ -1,8 +1,5 @@
 """Main training script for one experiment on the MAMe dataset."""
-import argparse
 import copy
-import csv
-import json
 import os
 import sys
 
@@ -13,7 +10,13 @@ from torch.utils.data import DataLoader
 from model_factory import build_model
 from mam_dataset_loader import MAMeDataset
 from transforms_factory import build_transforms
-from train_utils import train_one_epoch, validate, test_model
+from train_eval_utils import (
+    train_one_epoch,
+    validate,
+    test_model,
+    save_history_csv,
+    save_test_metrics_json,
+)
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -54,22 +57,6 @@ def build_dataloaders(args):
     )
 
     return ds_train, ds_val, ds_test, dl_train, dl_val, dl_test
-
-
-def save_history_csv(history_rows, output_dir):
-    history_path = os.path.join(output_dir, "history.csv")
-    fieldnames = ["epoch", "train_loss", "train_acc", "val_loss", "val_acc"]
-
-    with open(history_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(history_rows)
-
-
-def save_test_metrics_json(test_metrics, output_dir):
-    metrics_path = os.path.join(output_dir, "test_metrics.json")
-    with open(metrics_path, "w") as f:
-        json.dump(test_metrics, f, indent=2)
 
 
 def main(args):
