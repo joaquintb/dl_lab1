@@ -1,7 +1,10 @@
 dataset
+experiments_results
+__pycache__
 
 *.jpeg
 *.jpg
 images/data/*.png
 *.csv
 *.flake8
+*.log

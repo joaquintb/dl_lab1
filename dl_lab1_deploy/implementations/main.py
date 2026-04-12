@@ -19,24 +19,56 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(_SCRIPT_DIR)  # parent of implementations/
 
 
+def compute_metrics(model, dataloader, device, criterion):
+    """Compute validation/test loss and accuracy."""
+    model.eval()
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+    with torch.no_grad():
+        for imgs, labels in dataloader:
+            imgs = imgs.to(device)
+            if isinstance(labels, torch.Tensor):
+                labels = labels.to(device=device, dtype=torch.long)
+            else:
+                labels = torch.tensor(labels, dtype=torch.long, device=device)
+            outputs = model(imgs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item() * imgs.size(0)
+            _, preds = torch.max(outputs, 1)
+            total_correct += (preds == labels).sum().item()
+            total_samples += imgs.size(0)
+    avg_loss = total_loss / total_samples if total_samples > 0 else 0
+    accuracy = total_correct / total_samples if total_samples > 0 else 0
+    return avg_loss, accuracy
+
+
 def main(args):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
     ])
 
-    ds = MAMeDataset(args.csv, args.images_dir, transform=transform)
-    dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
-                    num_workers=2)
+    # Load train dataset
+    ds_train = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='train')
+    dl_train = DataLoader(ds_train, batch_size=args.batch_size, shuffle=True, num_workers=2)
+
+    # Load validation dataset
+    ds_val = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='val')
+    dl_val = DataLoader(ds_val, batch_size=args.batch_size, shuffle=False, num_workers=2)
+
+    # Load test dataset
+    ds_test = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='test')
+    dl_test = DataLoader(ds_test, batch_size=args.batch_size, shuffle=False, num_workers=2)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # infer num_classes from dataset if not provided
     if args.num_classes is None:
-        if getattr(ds, 'class_to_idx', None):
-            num_classes = len(ds.class_to_idx)
+        if getattr(ds_train, 'class_to_idx', None):
+            num_classes = len(ds_train.class_to_idx)
         else:
-            labels = [l for l in getattr(ds, 'labels', []) if isinstance(l, (int,)) and l >= 0]
+            labels = [l for l in getattr(ds_train, 'labels', []) if isinstance(l, (int,)) and l >= 0]
             if labels:
                 num_classes = int(max(labels)) + 1
             else:
@@ -61,11 +93,14 @@ def main(args):
                                 weight_decay=getattr(args, 'weight_decay', 1e-4))
 
     epochs = int(getattr(args, 'epochs', 1))
-    model.train()
+    
+    print(f"Training on {len(ds_train)} samples, validating on {len(ds_val)}, testing on {len(ds_test)}")
+    
     for epoch in range(epochs):
-        for batch_idx, (imgs, labels) in enumerate(dl):
+        model.train()
+        train_loss = 0.0
+        for batch_idx, (imgs, labels) in enumerate(dl_train):
             imgs = imgs.to(device)
-            # labels may already be a tensor (default_collate) or a list; handle both without copying tensors
             if isinstance(labels, torch.Tensor):
                 labels = labels.to(device=device, dtype=torch.long)
             else:
@@ -75,8 +110,17 @@ def main(args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            train_loss = loss.item()
             if batch_idx % 10 == 0:
-                print(f'Epoch {epoch+1}/{epochs} Batch {batch_idx} loss {loss.item():.4f}')
+                print(f'Epoch {epoch+1}/{epochs} Batch {batch_idx} train_loss {loss.item():.4f}')
+        
+        # Compute validation metrics
+        val_loss, val_acc = compute_metrics(model, dl_val, device, criterion)
+        print(f'Epoch {epoch+1}/{epochs} val_loss {val_loss:.4f} val_acc {val_acc:.4f}')
+    
+    # Compute final test metrics
+    test_loss, test_acc = compute_metrics(model, dl_test, device, criterion)
+    print(f'FINAL TEST RESULTS: test_loss {test_loss:.4f} test_acc {test_acc:.4f}')
 
 
 if __name__ == '__main__':

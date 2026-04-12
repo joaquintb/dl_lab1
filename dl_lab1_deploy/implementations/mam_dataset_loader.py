@@ -15,12 +15,19 @@ class MAMeDataset(Dataset):
     """
 
     def __init__(self, csv_path, images_dir, transform=None, filename_col=None,
-                 label_col=None):
+                 label_col=None, subset=None):
         self.csv_path = csv_path
         self.images_dir = images_dir
         self.transform = transform
 
         df = pd.read_csv(csv_path)
+        
+        # Filter by subset
+        if subset is not None:
+            if 'Subset' in df.columns:
+                df = df[df['Subset'] == subset].reset_index(drop=True)
+            else:
+                raise ValueError(f"'Subset' column not found in CSV. Available columns: {df.columns.tolist()}")
 
         def _norm(s):
             return ''.join(c for c in str(s).lower() if c.isalnum())
@@ -86,9 +93,19 @@ if __name__ == '__main__':
     from torchvision import transforms
     csv = os.path.join('images', 'MAMe_dataset.csv')
     imgs = os.path.join('images', 'data')
-    ds = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]))
-    print('Dataset size:', len(ds))
+    
+    # Test with train subset
+    ds_train = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='train')
+    print('Train dataset size:', len(ds_train))
+
+    # Test with validation subset
+    ds_val = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='validation')
+    print('Validation dataset size:', len(ds_val))
+
+    # Test with test subset
+    ds_test = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='test')
+    print('Test dataset size:', len(ds_test))
 
     # Test loading a sample
-    x, y = ds[-1]
+    x, y = ds_train[-1]
     print('Sample shape:', x.shape, 'label:', y)

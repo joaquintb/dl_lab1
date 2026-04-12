@@ -14,16 +14,16 @@
     "lr": 0.01,
     "weight_decay": 0.0,
     "dropout": 0.0,
-    "epochs": 20,
+    "epochs": 25,
     "batch_size": 32
   },
   {
     "name": "underfit_test",
     "model": "vgg11",
-    "lr": 1e-6,
-    "weight_decay": 1e-2,
-    "dropout": 0.9,
-    "epochs": 15,
+    "lr": 1e-7,
+    "weight_decay": 0.01,
+    "dropout": 0.95,
+    "epochs": 5,
     "batch_size": 16
   }
 ]
