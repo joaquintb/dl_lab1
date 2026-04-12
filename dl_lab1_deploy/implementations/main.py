@@ -22,20 +22,6 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(_SCRIPT_DIR)  # parent of implementations/
 
 
-def infer_num_classes(dataset, fallback=None):
-    if fallback is not None:
-        return fallback
-
-    if getattr(dataset, "class_to_idx", None):
-        return len(dataset.class_to_idx)
-
-    labels = [l for l in getattr(dataset, "labels", []) if isinstance(l, int) and l >= 0]
-    if labels:
-        return int(max(labels)) + 1
-
-    raise ValueError("Could not infer number of classes from dataset; pass --num-classes")
-
-
 def build_dataloaders(args):
     train_transform, eval_transform = build_transforms(
         augmentation=getattr(args, "augmentation", "none"),
@@ -94,7 +80,7 @@ def main(args):
     ds_train, ds_val, ds_test, dl_train, dl_val, dl_test = build_dataloaders(args)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_classes = infer_num_classes(ds_train, fallback=args.num_classes)
+    num_classes = 29
 
     model = build_model(args, num_classes).to(device)
 

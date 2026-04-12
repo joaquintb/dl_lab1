@@ -23,7 +23,6 @@ def build_args_namespace(exp, csv, images_dir, output_dir):
 
     # Experiment config with defaults
     ns.batch_size = exp.get("batch_size", 16)
-    ns.num_classes = exp.get("num_classes", None)
 
     ns.model = exp.get("model", "vgg16")
     ns.lr = exp.get("lr", 0.01)
