@@ -8,3 +8,4 @@ images/data/*.png
 *.csv
 *.flake8
 *.log
+*.zip
