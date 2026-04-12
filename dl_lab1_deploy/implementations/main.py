@@ -1,17 +1,19 @@
-"""Main training script for VGG using the local MAMe dataset loader.
-"""
+"""Main training script for one experiment on the MAMe dataset."""
 import argparse
+import copy
+import csv
+import json
 import os
 import sys
 
-from model_factory import build_model
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
 
-from vgg_from_scratch import vgg16
+from model_factory import build_model
 from mam_dataset_loader import MAMeDataset
+from transforms_factory import build_transforms
+from train_utils import train_one_epoch, validate, test_model
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -20,115 +22,207 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(_SCRIPT_DIR)  # parent of implementations/
 
 
-def compute_metrics(model, dataloader, device, criterion):
-    """Compute validation/test loss and accuracy."""
-    model.eval()
-    total_loss = 0.0
-    total_correct = 0
-    total_samples = 0
-    with torch.no_grad():
-        for imgs, labels in dataloader:
-            imgs = imgs.to(device)
-            if isinstance(labels, torch.Tensor):
-                labels = labels.to(device=device, dtype=torch.long)
-            else:
-                labels = torch.tensor(labels, dtype=torch.long, device=device)
-            outputs = model(imgs)
-            loss = criterion(outputs, labels)
-            total_loss += loss.item() * imgs.size(0)
-            _, preds = torch.max(outputs, 1)
-            total_correct += (preds == labels).sum().item()
-            total_samples += imgs.size(0)
-    avg_loss = total_loss / total_samples if total_samples > 0 else 0
-    accuracy = total_correct / total_samples if total_samples > 0 else 0
-    return avg_loss, accuracy
+def infer_num_classes(dataset, fallback=None):
+    if fallback is not None:
+        return fallback
+
+    if getattr(dataset, "class_to_idx", None):
+        return len(dataset.class_to_idx)
+
+    labels = [l for l in getattr(dataset, "labels", []) if isinstance(l, int) and l >= 0]
+    if labels:
+        return int(max(labels)) + 1
+
+    raise ValueError("Could not infer number of classes from dataset; pass --num-classes")
+
+
+def build_dataloaders(args):
+    train_transform, eval_transform = build_transforms(
+        augmentation=getattr(args, "augmentation", "none"),
+        image_size=getattr(args, "image_size", 224),
+    )
+
+    num_workers = getattr(args, "num_workers", 2)
+
+    ds_train = MAMeDataset(args.csv, args.images_dir, transform=train_transform, subset="train")
+    ds_val = MAMeDataset(args.csv, args.images_dir, transform=eval_transform, subset="val")
+    ds_test = MAMeDataset(args.csv, args.images_dir, transform=eval_transform, subset="test")
+
+    dl_train = DataLoader(
+        ds_train,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+    )
+    dl_val = DataLoader(
+        ds_val,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+    dl_test = DataLoader(
+        ds_test,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+
+    return ds_train, ds_val, ds_test, dl_train, dl_val, dl_test
+
+
+def save_history_csv(history_rows, output_dir):
+    history_path = os.path.join(output_dir, "history.csv")
+    fieldnames = ["epoch", "train_loss", "train_acc", "val_loss", "val_acc"]
+
+    with open(history_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(history_rows)
+
+
+def save_test_metrics_json(test_metrics, output_dir):
+    metrics_path = os.path.join(output_dir, "test_metrics.json")
+    with open(metrics_path, "w") as f:
+        json.dump(test_metrics, f, indent=2)
 
 
 def main(args):
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-    ])
+    output_dir = getattr(args, "output_dir", None)
+    if output_dir is not None:
+        os.makedirs(output_dir, exist_ok=True)
 
-    # Load train dataset
-    ds_train = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='train')
-    dl_train = DataLoader(ds_train, batch_size=args.batch_size, shuffle=True, num_workers=2)
+    ds_train, ds_val, ds_test, dl_train, dl_val, dl_test = build_dataloaders(args)
 
-    # Load validation dataset
-    ds_val = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='val')
-    dl_val = DataLoader(ds_val, batch_size=args.batch_size, shuffle=False, num_workers=2)
-
-    # Load test dataset
-    ds_test = MAMeDataset(args.csv, args.images_dir, transform=transform, subset='test')
-    dl_test = DataLoader(ds_test, batch_size=args.batch_size, shuffle=False, num_workers=2)
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    # infer num_classes from dataset if not provided
-    if args.num_classes is None:
-        if getattr(ds_train, 'class_to_idx', None):
-            num_classes = len(ds_train.class_to_idx)
-        else:
-            labels = [l for l in getattr(ds_train, 'labels', []) if isinstance(l, (int,)) and l >= 0]
-            if labels:
-                num_classes = int(max(labels)) + 1
-            else:
-                raise ValueError('Could not infer number of classes from dataset; pass --num-classes')
-    else:
-        num_classes = args.num_classes
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_classes = infer_num_classes(ds_train, fallback=args.num_classes)
 
     model = build_model(args, num_classes).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=getattr(args, 'lr', 0.01), momentum=0.9,
-                                weight_decay=getattr(args, 'weight_decay', 1e-4))
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        lr=getattr(args, "lr", 0.01),
+        momentum=0.9,
+        weight_decay=getattr(args, "weight_decay", 1e-4),
+    )
 
-    epochs = int(getattr(args, 'epochs', 1))
-    
-    print(f"Training on {len(ds_train)} samples, validating on {len(ds_val)}, testing on {len(ds_test)}")
-    print(f"Number of classes: {num_classes}")
-    print(f"\nHyperparameters:")
-    print(f"  Model: {getattr(args, 'model', 'vgg16')}")
-    print(f"  Learning Rate: {getattr(args, 'lr', 0.01)}")
-    print(f"  Weight Decay: {getattr(args, 'weight_decay', 1e-4)}")
-    print(f"  Dropout: {getattr(args, 'dropout', 0.5)}")
-    print(f"  Epochs: {epochs}")
-    print(f"  Batch Size: {args.batch_size}")
-    print(f"  Device: {device}\n")
-    
-    for epoch in range(epochs):
-        model.train()
-        train_loss = 0.0
-        for batch_idx, (imgs, labels) in enumerate(dl_train):
-            imgs = imgs.to(device)
-            if isinstance(labels, torch.Tensor):
-                labels = labels.to(device=device, dtype=torch.long)
-            else:
-                labels = torch.tensor(labels, dtype=torch.long, device=device)
-            outputs = model(imgs)
-            loss = criterion(outputs, labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            train_loss = loss.item()
-            if batch_idx % 10 == 0:
-                print(f'Epoch {epoch+1}/{epochs} Batch {batch_idx} train_loss {loss.item():.4f}')
-        
-        # Compute validation metrics
-        val_loss, val_acc = compute_metrics(model, dl_val, device, criterion)
-        print(f'Epoch {epoch+1}/{epochs} val_loss {val_loss:.4f} val_acc {val_acc:.4f}')
-    
-    # Compute final test metrics
-    test_loss, test_acc = compute_metrics(model, dl_test, device, criterion)
-    print(f'FINAL TEST RESULTS: test_loss {test_loss:.4f} test_acc {test_acc:.4f}')
+    epochs = int(getattr(args, "epochs", 1))
+    log_every = int(getattr(args, "log_every", 10))
 
+    print(
+        f"RUN_INFO "
+        f"model={getattr(args, 'model', 'vgg16')} "
+        f"lr={getattr(args, 'lr', 0.01)} "
+        f"weight_decay={getattr(args, 'weight_decay', 1e-4)} "
+        f"dropout={getattr(args, 'dropout', None)} "
+        f"epochs={epochs} "
+        f"batch_size={args.batch_size} "
+        f"augmentation={getattr(args, 'augmentation', 'none')} "
+        f"image_size={getattr(args, 'image_size', 224)} "
+        f"device={device}"
+    )
+    print(
+        f"DATA_INFO "
+        f"train_samples={len(ds_train)} "
+        f"val_samples={len(ds_val)} "
+        f"test_samples={len(ds_test)} "
+        f"num_classes={num_classes}"
+    )
 
-if __name__ == '__main__':
-    p = argparse.ArgumentParser()
-    p.add_argument('--csv', default=os.path.join(_REPO_ROOT, 'images/MAMe_dataset.csv'))
-    p.add_argument('--images-dir', default=os.path.join(_REPO_ROOT, 'images/data'))
-    p.add_argument('--batch-size', type=int, default=16)
-    p.add_argument('--num-classes', type=int, default=None,
-                   help='Number of output classes. If omitted, inferred from CSV labels.')
-    args = p.parse_args()
-    main(args)
+    best_val_acc = -1.0
+    best_epoch = 0
+    best_state_dict = copy.deepcopy(model.state_dict())
+
+    history_rows = []
+
+    for epoch in range(1, epochs + 1):
+        train_loss, train_acc = train_one_epoch(
+            model=model,
+            dataloader=dl_train,
+            device=device,
+            criterion=criterion,
+            optimizer=optimizer,
+            epoch=epoch,
+            epochs=epochs,
+            log_every=log_every,
+        )
+
+        val_loss, val_acc = validate(
+            model=model,
+            dataloader=dl_val,
+            device=device,
+            criterion=criterion,
+        )
+
+        history_rows.append(
+            {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "train_acc": train_acc,
+                "val_loss": val_loss,
+                "val_acc": val_acc,
+            }
+        )
+
+        print(
+            f"EPOCH_SUMMARY "
+            f"epoch={epoch}/{epochs} "
+            f"train_loss={train_loss:.4f} "
+            f"train_acc={train_acc:.4f} "
+            f"val_loss={val_loss:.4f} "
+            f"val_acc={val_acc:.4f}"
+        )
+
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_epoch = epoch
+            best_state_dict = copy.deepcopy(model.state_dict())
+
+    print(f"BEST_CHECKPOINT epoch={best_epoch} val_acc={best_val_acc:.4f}")
+
+    model.load_state_dict(best_state_dict)
+
+    if output_dir is not None:
+        checkpoint_path = os.path.join(output_dir, "best_model.pt")
+        torch.save(
+            {
+                "epoch": best_epoch,
+                "val_acc": best_val_acc,
+                "model_state_dict": model.state_dict(),
+            },
+            checkpoint_path,
+        )
+        save_history_csv(history_rows, output_dir)
+
+    test_loss, test_acc, macro_f1, weighted_f1, macro_precision, macro_recall = test_model(
+        model=model,
+        dataloader=dl_test,
+        device=device,
+        criterion=criterion,
+    )
+
+    test_metrics = {
+        "best_epoch": best_epoch,
+        "best_val_acc": best_val_acc,
+        "test_loss": test_loss,
+        "test_acc": test_acc,
+        "macro_f1": macro_f1,
+        "weighted_f1": weighted_f1,
+        "macro_precision": macro_precision,
+        "macro_recall": macro_recall,
+    }
+
+    if output_dir is not None:
+        save_test_metrics_json(test_metrics, output_dir)
+
+    print(
+        f"FINAL_TEST "
+        f"best_epoch={best_epoch} "
+        f"best_val_acc={best_val_acc:.4f} "
+        f"test_loss={test_loss:.4f} "
+        f"test_acc={test_acc:.4f} "
+        f"macro_f1={macro_f1:.4f} "
+        f"weighted_f1={weighted_f1:.4f} "
+        f"macro_precision={macro_precision:.4f} "
+        f"macro_recall={macro_recall:.4f}"
+    )
