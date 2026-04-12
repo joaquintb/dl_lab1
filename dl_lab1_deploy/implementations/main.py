@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from dl_lab1_deploy.implementations.model_factory import build_model
+from model_factory import build_model
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -86,6 +86,15 @@ def main(args):
     epochs = int(getattr(args, 'epochs', 1))
     
     print(f"Training on {len(ds_train)} samples, validating on {len(ds_val)}, testing on {len(ds_test)}")
+    print(f"Number of classes: {num_classes}")
+    print(f"\nHyperparameters:")
+    print(f"  Model: {getattr(args, 'model', 'vgg16')}")
+    print(f"  Learning Rate: {getattr(args, 'lr', 0.01)}")
+    print(f"  Weight Decay: {getattr(args, 'weight_decay', 1e-4)}")
+    print(f"  Dropout: {getattr(args, 'dropout', 0.5)}")
+    print(f"  Epochs: {epochs}")
+    print(f"  Batch Size: {args.batch_size}")
+    print(f"  Device: {device}\n")
     
     for epoch in range(epochs):
         model.train()
