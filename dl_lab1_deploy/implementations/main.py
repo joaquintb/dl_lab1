@@ -156,15 +156,15 @@ def main(args):
     model.load_state_dict(best_state_dict)
 
     if output_dir is not None:
-        checkpoint_path = os.path.join(output_dir, "best_model.pt")
-        torch.save(
-            {
-                "epoch": best_epoch,
-                "val_acc": best_val_acc,
-                "model_state_dict": model.state_dict(),
-            },
-            checkpoint_path,
-        )
+        # checkpoint_path = os.path.join(output_dir, "best_model.pt")
+        # torch.save(
+        #     {
+        #         "epoch": best_epoch,
+        #         "val_acc": best_val_acc,
+        #         "model_state_dict": model.state_dict(),
+        #     },
+        #     checkpoint_path,
+        # )
         save_history_csv(history_rows, output_dir)
 
     test_loss, test_acc, macro_f1, weighted_f1, macro_precision, macro_recall = test_model(
