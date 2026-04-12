@@ -46,7 +46,10 @@ def run_all(config_path, csv, images_dir, results_dir="experiments_results"):
 
     for i, exp in enumerate(experiments):
         name = exp.get("name", f"exp_{i:03d}")
-        experiment_dir = os.path.join(results_dir, name)
+        model = exp.get("model", "unknown_model")
+        folder_name = f"{model}_{name}"
+        experiment_dir = os.path.join(results_dir, folder_name)
+        
         os.makedirs(experiment_dir, exist_ok=True)
 
         # Save experiment config used for this run
