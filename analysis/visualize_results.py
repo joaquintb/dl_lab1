@@ -2,7 +2,6 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 def load_history(history_path):
     df = pd.read_csv(history_path)
 
@@ -46,7 +45,8 @@ def plot_accuracy(df, experiment_name, output_path):
 
 def main():
     analysis_dir = Path(__file__).resolve().parent
-    results_dir = analysis_dir.parent / "experiments_results"
+    project_root = analysis_dir.parent / "dl_lab1_deploy"
+    results_dir = project_root / "experiments_results"
     plots_dir = analysis_dir / "plots"
     plots_dir.mkdir(exist_ok=True)
 
