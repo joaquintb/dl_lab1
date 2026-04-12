@@ -1,8 +1,0 @@
-LOGIN
-ssh nct01191@alogin1.bsc.es
-H9nqPR.191
-
-FILE TRANSFER
-Joaquin
--> scp -r dl_lab1 nct01191@alogin1.bsc.es:/home/nct/nct01191/joaquin/
-<- scp -r nct01191@alogin1.bsc.es:/home/nct/nct01191/joaquin/dl_lab1 .
