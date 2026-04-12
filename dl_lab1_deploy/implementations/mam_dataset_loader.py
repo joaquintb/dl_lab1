@@ -1,80 +1,64 @@
 import os
 from PIL import Image
 import pandas as pd
-import torch
 from torch.utils.data import Dataset
 
 
 class MAMeDataset(Dataset):
     """
-    CSV-driven dataset loader for the MAMe dataset in `images/data/`.
+    Dataset loader for the MAMe CSV schema.
 
-    Expects a CSV with at least a filename column and a label column.
-    By default it will try common column names;
-    you can override with `filename_col` and `label_col`.
+    Expected columns:
+    - Image file
+    - Medium
+    - Subset
     """
 
-    def __init__(self, csv_path, images_dir, transform=None, filename_col=None,
-                 label_col=None, subset=None):
+    def __init__(self, csv_path, images_dir, transform=None, subset=None):
         self.csv_path = csv_path
         self.images_dir = images_dir
         self.transform = transform
 
         df = pd.read_csv(csv_path)
-        
-        # Filter by subset
+
+        required_cols = ["Image file", "Medium", "Subset"]
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise ValueError(
+                f"Missing required columns: {missing_cols}. "
+                f"Available columns: {df.columns.tolist()}"
+            )
+
+        # Build a global label mapping BEFORE filtering by subset
+        unique_labels = sorted(df["Medium"].dropna().astype(str).unique())
+        self.class_to_idx = {label: i for i, label in enumerate(unique_labels)}
+        self.idx_to_class = {i: label for label, i in self.class_to_idx.items()}
+
         if subset is not None:
-            if 'Subset' in df.columns:
-                df = df[df['Subset'] == subset].reset_index(drop=True)
-            else:
-                raise ValueError(f"'Subset' column not found in CSV. Available columns: {df.columns.tolist()}")
+            subset_map = {
+                "train": "train",
+                "training": "train",
+                "val": "val",
+                "validation": "val",
+                "test": "test",
+            }
 
-        def _norm(s):
-            return ''.join(c for c in str(s).lower() if c.isalnum())
+            subset_norm = subset_map.get(str(subset).strip().lower(), str(subset).strip().lower())
+            csv_subset_norm = df["Subset"].astype(str).str.strip().str.lower().map(
+                lambda x: subset_map.get(x, x)
+            )
 
-        col_map = {_norm(c): c for c in df.columns}
+            df = df[csv_subset_norm == subset_norm].reset_index(drop=True)
 
-        if filename_col is None:
-            for cand in ['filename', 'file', 'image', 'img', 'imagefile']:
-                if cand in col_map:
-                    filename_col = col_map[cand]
-                    break
-        if label_col is None:
-            for cand in ['label', 'class', 'target', 'medium', 'category']:
-                if cand in col_map:
-                    label_col = col_map[cand]
-                    break
+            if len(df) == 0:
+                available_subsets = sorted(df["Subset"].astype(str).str.strip().str.lower().unique())
+                raise ValueError(
+                    f"No rows found for subset='{subset}'. "
+                    f"Available subset values may include: {available_subsets}"
+                )
 
-        if filename_col is None:
-            raise ValueError('Could not find a filename column in CSV; pass filename_col')
-        if label_col is None:
-            df['__label__'] = -1
-            label_col = '__label__'
-
-        self.filenames = df[filename_col].astype(str).tolist()
-        raw_labels = df[label_col].tolist()
-
-        try:
-            if df[label_col].dtype == object or any(isinstance(l, str) for l in raw_labels):
-                uniques = []
-                seen = set()
-                for v in raw_labels:
-                    if pd.isna(v):
-                        continue
-                    if v not in seen:
-                        seen.add(v)
-                        uniques.append(v)
-                self.class_to_idx = {v: i for i, v in enumerate(uniques)}
-                self.idx_to_class = {i: v for v, i in self.class_to_idx.items()}
-                self.labels = [self.class_to_idx.get(v, -1) if not pd.isna(v) else -1 for v in raw_labels]
-            else:
-                self.class_to_idx = None
-                self.idx_to_class = None
-                self.labels = [int(v) if not pd.isna(v) else -1 for v in raw_labels]
-        except Exception:
-            self.class_to_idx = None
-            self.idx_to_class = None
-            self.labels = raw_labels
+        self.filenames = df["Image file"].astype(str).tolist()
+        self.labels = [self.class_to_idx[str(v)] for v in df["Medium"].astype(str).tolist()]
 
     def __len__(self):
         return len(self.filenames)
@@ -82,30 +66,15 @@ class MAMeDataset(Dataset):
     def __getitem__(self, idx):
         fname = self.filenames[idx]
         label = self.labels[idx]
+
         img_path = os.path.join(self.images_dir, fname)
-        img = Image.open(img_path).convert('RGB')
-        if self.transform:
+        if not os.path.isfile(img_path):
+            raise FileNotFoundError(f"Image not found: {img_path}")
+
+        with Image.open(img_path) as img:
+            img = img.convert("RGB")
+
+        if self.transform is not None:
             img = self.transform(img)
+
         return img, label
-
-
-if __name__ == '__main__':
-    from torchvision import transforms
-    csv = os.path.join('images', 'MAMe_dataset.csv')
-    imgs = os.path.join('images', 'data')
-    
-    # Test with train subset
-    ds_train = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='train')
-    print('Train dataset size:', len(ds_train))
-
-    # Test with validation subset
-    ds_val = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='validation')
-    print('Validation dataset size:', len(ds_val))
-
-    # Test with test subset
-    ds_test = MAMeDataset(csv, imgs, transform=transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()]), subset='test')
-    print('Test dataset size:', len(ds_test))
-
-    # Test loading a sample
-    x, y = ds_train[-1]
-    print('Sample shape:', x.shape, 'label:', y)
