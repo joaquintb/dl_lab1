@@ -1,7 +1,11 @@
 dataset
+experiments_results
+__pycache__
 
 *.jpeg
 *.jpg
-*.png
+images/data/*.png
 *.csv
 *.flake8
+*.log
+*.zip

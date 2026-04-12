@@ -1,0 +1,68 @@
+[
+{
+    "name": "baseline",
+    "model": "vgg16",
+    "lr": 1e-4,
+    "weight_decay": 1e-4,
+    "dropout": 0.3,
+    "epochs": 20,
+    "batch_size": 16
+  },
+  {
+    "name": "overfit_test",
+    "model": "vgg16",
+    "lr": 0.01,
+    "weight_decay": 0.0,
+    "dropout": 0.0,
+    "epochs": 25,
+    "batch_size": 32
+  },
+  {
+    "name": "underfit_test",
+    "model": "vgg16",
+    "lr": 1e-6,
+    "weight_decay": 0.01,
+    "dropout": 0.75,
+    "epochs": 10,
+    "batch_size": 16
+  },
+  {
+    "name": "underfitting",
+    "model": "resnet18",
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "dropout": null,
+    "epochs": 8,
+    "batch_size": 32,
+    "augmentation": "none",
+    "image_size": 224,
+    "num_workers": 2,
+    "log_every": 10
+  },
+  {
+    "name": "overfitting",
+    "model": "resnet18",
+    "lr": 0.01,
+    "weight_decay": 0.0,
+    "dropout": null,
+    "epochs": 20,
+    "batch_size": 32,
+    "augmentation": "none",
+    "image_size": 224,
+    "num_workers": 2,
+    "log_every": 10
+  },
+  {
+    "name": "refined",
+    "model": "resnet18",
+    "lr": 0.01,
+    "weight_decay": 0.0001,
+    "dropout": null,
+    "epochs": 20,
+    "batch_size": 32,
+    "augmentation": "basic",
+    "image_size": 224,
+    "num_workers": 2,
+    "log_every": 10
+  }
+]
