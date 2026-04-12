@@ -39,7 +39,7 @@ def build_args_namespace(exp, csv, images_dir, output_dir):
     return ns
 
 
-def run_all(config_path, csv, images_dir, results_dir="results"):
+def run_all(config_path, csv, images_dir, results_dir="experiments_results"):
     os.makedirs(results_dir, exist_ok=True)
 
     with open(config_path, "r") as f:
