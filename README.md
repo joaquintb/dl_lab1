@@ -32,7 +32,7 @@ Expected behavior: **balanced performance** — reasonable fit without overfitti
 Expected behavior: **high variance, low bias** — model memorizes training data but generalizes poorly.
 
 ### 3) Underfit Test
-- **Model**: VGG11 (smaller capacity)
+- **Model**: VGG16
 - **Learning rate**: 1e-6 (extremely slow — 10,000x slower than baseline)
 - **Weight decay**: 1e-2 (heavy regularization)
 - **Dropout**: 0.9 (very aggressive)

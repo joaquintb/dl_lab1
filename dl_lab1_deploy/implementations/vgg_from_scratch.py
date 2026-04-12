@@ -91,9 +91,5 @@ class VGG(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def vgg11(num_classes=1000, batch_norm=False):
-    return VGG(make_layers(cfgs['VGG11'], batch_norm=batch_norm), num_classes=num_classes)
-
-
 def vgg16(num_classes=1000, batch_norm=False):
     return VGG(make_layers(cfgs['VGG16'], batch_norm=batch_norm), num_classes=num_classes)

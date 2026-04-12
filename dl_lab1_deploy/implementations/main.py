@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from vgg_from_scratch import vgg16, vgg11
+from vgg_from_scratch import vgg16
 from mam_dataset_loader import MAMeDataset
 
 sys.path.append(os.path.dirname(__file__))
