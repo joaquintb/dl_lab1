@@ -45,7 +45,7 @@ def plot_accuracy(df, experiment_name, output_path):
 
 def main():
     analysis_dir = Path(__file__).resolve().parent
-    project_root = analysis_dir.parent / "dl_lab1_deploy"
+    project_root = analysis_dir.parent
     results_dir = project_root / "experiments_results"
     plots_dir = analysis_dir / "plots"
     plots_dir.mkdir(exist_ok=True)
