@@ -9,4 +9,3 @@ images/data/*.png
 *.flake8
 *.log
 *.zip
-statement.pdf

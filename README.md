@@ -50,3 +50,15 @@ python3 implementations/run_experiments.py --config implementations/experiments.
 ```
 
 Results are logged per experiment in `experiments_results/{baseline,overfit_test,underfit_test}.log`.
+
+## Supercomputer Run
+
+To reproduce the experiments on the supercomputer, copy the full `dl_lab1_deploy` folder to the cluster, keep it in the same project structure as the repository, and submit `run_job.sh` from inside that directory.
+
+The job script loads the cluster environment, runs `implementations/run_experiments.py`, and writes the outputs to `experiments_results/`. SLURM also creates `experiments_<jobid>.out` and `experiments_<jobid>.err` for the job logs.
+
+## Local Visualization
+
+After the job finishes, copy the `experiments_results/` folder back to the repository root so it sits outside `dl_lab1_deploy/`. Then run `analysis/visualize_results.py` locally to generate the training curves and accuracy charts from the saved `history.csv` files.
+
+The plots are written to `analysis/plots/`.
