@@ -2,7 +2,18 @@
 
 ## Data
 
-The repository includes an `images` folder that contains the visual data used in the lab. Inside `images` there is a `data` directory where all image files are stored. Also in the `images` folder is the `MAMe_dataset.csv` file which contains metadata and annotations for the specific images (for example: file names, labels, splits, and other attributes). Use `images/data/` to access the image files and `images/MAMe_dataset.csv` to load the related information.
+The code expects an `images` folder in the project root, but dataset files are not tracked in Git (they are ignored in `.gitignore`). Create this folder locally with the following structure:
+
+```text
+images/
+  data/
+    *.png
+  MAMe_dataset.csv
+```
+
+Inside `images`, the `data` directory stores the image files and `MAMe_dataset.csv` stores metadata/annotations (for example: file names, labels, splits, and other attributes). Use `images/data/` to access image files and `images/MAMe_dataset.csv` to load related labels and attributes.
+
+For cluster runs, copy this same `images/` folder into `dl_lab1_deploy/` before uploading so the supercomputer job has local access to both `images/data/` and `images/MAMe_dataset.csv`.
 
 This structure allows code to load image pixels from `images/data/` and join them with labels/attributes from `images/MAMe_dataset.csv` when preparing datasets for training and evaluation.
 
@@ -53,7 +64,7 @@ Results are logged per experiment in `experiments_results/{baseline,overfit_test
 
 ## Supercomputer Run
 
-To reproduce the experiments on the supercomputer, copy the full `dl_lab1_deploy` folder to the cluster, keep it in the same project structure as the repository, and submit `run_job.sh` from inside that directory.
+To reproduce the experiments on the supercomputer, first ensure `dl_lab1_deploy/images/` exists and contains `data/` plus `MAMe_dataset.csv`, then copy the full `dl_lab1_deploy` folder to the cluster, keep it in the same project structure as the repository, and submit `run_job.sh` from inside that directory.
 
 The job script loads the cluster environment, runs `implementations/run_experiments.py`, and writes the outputs to `experiments_results/`. SLURM also creates `experiments_<jobid>.out` and `experiments_<jobid>.err` for the job logs.
 
